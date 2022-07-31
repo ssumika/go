@@ -1,0 +1,18 @@
+{{template "header"}}
+
+<form method="POST">
+    <label for="">なまえ</label>
+    <input type="text" id="name" name="name">
+    <br>
+    <label for="sub">好きか？</label>
+    <input type="checkbox" id="like" name="like">
+    <br>
+    <input type="submit">
+</form>
+
+<br>
+
+<h1>名前: {{.Pname}}</h1> <!-- person 構造体のフィールド -->
+<h1>好きか？: {{.Plike}}</h1> <!-- person 構造体のフィールド -->
+
+{{template "footer"}}

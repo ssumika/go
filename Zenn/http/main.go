@@ -4,30 +4,33 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"net/url"
 )
 
-type dogdogdog int
+var tpl *template.Template
 
-func (m dogdogdog) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	data := struct {
-		Method      string
-		Submissions url.Values
-	}{
-		req.Method,
-		req.Form,
-	}
-	tpl.ExecuteTemplate(w, "index.gohtml", data)
+func init() {
+	tpl = template.Must(template.ParseGlob("templates/*"))
 }
 
-var tpl *template.Template = template.Must(template.ParseFiles("index.gohtml"))
+type person struct {
+	Pname string
+	Plike bool
+}
 
 func main() {
-	var d dogdogdog
-	http.ListenAndServe("localhost:8080", d)
+	http.HandleFunc("/", foo)
+	http.Handle("/favicon.ico", http.NotFoundHandler())
+	http.ListenAndServe(":8080", nil)
+}
+
+func foo(w http.ResponseWriter, req *http.Request) {
+
+	n := req.FormValue("name")
+	l := req.FormValue("like") == "on"
+
+	err := tpl.ExecuteTemplate(w, "index.gohtml", person{n, l})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) // 500
+		log.Fatalln(err)
+	}
 }

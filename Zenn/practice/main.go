@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
 
@@ -30,37 +29,29 @@ func main() {
 	http.HandleFunc("/signup", signup)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe("localhost:8080", nil)
-
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
-	var u user
-
-	// クッキーを取得
-	c, err := req.Cookie("session")
-	if err != nil {
-		u = user{}
-	} else {
-
-		// セッションがあればユーザーDB情報を取得
-		if un, ok := dbSessions[c.Value]; ok {
-			u, ok = dbUsers[un]
-			if !ok {
-				u = user{}
-			}
-		}
-	}
-
-	fmt.Println(c, u)
-
-	tpl.ExecuteTemplate(w, "index.html", u)
+	u := getUser(req)
+	tpl.ExecuteTemplate(w, "index.html", u) // u をテンプレートに渡す
 }
 
 func vip(w http.ResponseWriter, req *http.Request) {
-	tpl.ExecuteTemplate(w, "vip.html", nil)
+	u := getUser(req)
+	if !alreadyLoggedIn(req) {
+		http.Redirect(w, req, "/", http.StatusSeeOther)
+		return
+	}
+	tpl.ExecuteTemplate(w, "vip.html", u)
 }
 
 func signup(w http.ResponseWriter, req *http.Request) {
+	// すでにログインしている場合はこのページは必要ない
+	if alreadyLoggedIn(req) {
+		http.Redirect(w, req, "/", http.StatusSeeOther)
+		return
+	}
+
 	// FORMから送信してきたときの処理
 	if req.Method == http.MethodPost {
 		un := req.FormValue("username")
@@ -68,6 +59,13 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		f := req.FormValue("firstname")
 		l := req.FormValue("lastname")
 
+		// もしユーザーネームが既に使われていたらエラーにする
+		if _, ok := dbUsers[un]; ok {
+			http.Error(w, "Username already taken", http.StatusForbidden)
+			return
+		}
+
+		// セッションDBを作成
 		sID := uuid.New()
 		c := &http.Cookie{
 			Name:  "session",
@@ -79,10 +77,9 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		u := user{un, p, f, l}
 		dbUsers[un] = u
 
-		// リダイレクト
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
-
 	}
+
 	tpl.ExecuteTemplate(w, "signup.html", nil)
 }

@@ -9,10 +9,11 @@ import (
 )
 
 type user struct {
-	UserName string
-	Password []byte // changed to []byte
-	First    string
-	Last     string
+	UserName   string
+	Password   []byte
+	First      string
+	Last       string
+	Permission string
 }
 
 var dbSessions = map[string]string{} // session ID, user ID
@@ -45,7 +46,11 @@ func vip(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
-	tpl.ExecuteTemplate(w, "vip.html", u)
+	if u.Permission != "dog" {
+		http.Error(w, "No dogs allowed.", http.StatusForbidden)
+		return
+	}
+	tpl.ExecuteTemplate(w, "vip.gohtml", u)
 }
 
 func signup(w http.ResponseWriter, req *http.Request) {
@@ -61,6 +66,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		p := req.FormValue("password")
 		f := req.FormValue("firstname")
 		l := req.FormValue("lastname")
+		s := req.FormValue("permisson")
 
 		// もしユーザーネームが既に使われていたらエラーにする
 		if _, ok := dbUsers[un]; ok {
@@ -83,7 +89,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		u := user{un, bs, f, l}
+		u := user{un, bs, f, l, s}
 		dbUsers[un] = u
 
 		http.Redirect(w, req, "/", http.StatusSeeOther)
